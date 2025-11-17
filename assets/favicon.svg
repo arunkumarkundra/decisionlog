@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>DecisionLog Icon</title>
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="#0f172a" stroke="#3b82f6" stroke-width="2"/>
+  
+  <!-- Document/log icon representation -->
+  <rect x="18" y="14" width="28" height="36" rx="2" fill="#f8fafc" stroke="#3b82f6" stroke-width="1.5"/>
+  
+  <!-- Lines representing text/entries -->
+  <line x1="23" y1="22" x2="41" y2="22" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+  <line x1="23" y1="28" x2="38" y2="28" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+  <line x1="23" y1="34" x2="41" y2="34" stroke="#0f172a" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Star rating indicator (small stars to represent decision importance) -->
+  <polygon points="32,38 33.5,41 37,41.5 34.5,44 35,47.5 32,45.8 29,47.5 29.5,44 27,41.5 30.5,41" 
+           fill="#3b82f6" stroke="#0f172a" stroke-width="0.5"/>
+</svg>
