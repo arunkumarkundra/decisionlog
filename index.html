@@ -1,432 +1,310 @@
-<!--
-DecisionLogApp - Single-file static HTML app
-Features:
-- Minimal-friction decision logging for high-impact decisions
-- Optional rating, timeline of rating changes
-- Responsive and accessible UI
-- Sign in with Google (OAuth) — client-side only
-- All data stored in user's Google Drive as a single JSON file (no app DB)
-
-IMPORTANT setup notes (read before running):
-1) Create OAuth 2.0 Client ID in Google Cloud Console (type: Web application).
-   - Add your GitHub Pages URL (or http://localhost) to authorized origins.
-   - Copy the Client ID and API key into the <script> config below.
-2) Enable Google Drive API for the project.
-3) Place this single HTML file on GitHub Pages or open locally (if testing locally, use an origin registered in OAuth).
-4) Scopes used: https://www.googleapis.com/auth/drive.file (only gives the app access to files it creates/opened)
-
-Security & privacy:
-- This app stores a single JSON file in the user's Drive named: DecisionLogApp_data.json
-- The app only requests drive.file scope (access to files created or opened by the app), not full drive.
-- If you want stronger privacy, add client-side encryption before upload (I can help add that).
-
-If anything fails due to Google APIs changes, tell me your client ID and I can adjust the code or instructions.
--->
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Decision Log · Static</title>
-  <meta name="description" content="Minimal decision-logging app. Stores your decision log file in your Google Drive. Responsive and accessible." />
-
-  <!-- Chart.js for rating graphs -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- Google Identity Services (for sign-in) -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <!-- Google APIs client (for Drive REST calls) -->
-  <script src="https://apis.google.com/js/api.js" async defer></script>
-
-  <style>
-    :root{--bg:#0f172a;--card:#0b1220;--muted:#94a3b8;--accent:#60a5fa;--success:#10b981}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,'Helvetica Neue',Arial}
-    body{background:linear-gradient(180deg,#071129 0%, #0b1220 100%);color:#e6eef8;line-height:1.4}
-    .container{max-width:980px;margin:28px auto;padding:18px}
-    header{display:flex;gap:12px;align-items:center;justify-content:space-between}
-    h1{font-size:1.2rem;margin:0}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6);}
-    form{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-    label{display:block;font-size:0.85rem;color:var(--muted)}
-    input[type=text], input[type=date], input[type=number], textarea, select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
-    textarea{min-height:90px;resize:vertical}
-    .full{grid-column:1/-1}
-    .actions{display:flex;gap:8px;align-items:center}
-    button{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;color:#042035;cursor:pointer}
-    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
-    .controls{display:flex;gap:8px;align-items:center}
-    nav{display:flex;gap:6px;align-items:center}
-    ul.list{margin:0;padding:0;list-style:none}
-    li.item{padding:10px;border-radius:8px;margin-bottom:8px;background:rgba(255,255,255,0.01);display:flex;justify-content:space-between;align-items:flex-start}
-    .meta{font-size:0.85rem;color:var(--muted)}
-    @media (max-width:720px){form{grid-template-columns:1fr} .container{padding:12px} header{flex-direction:column;align-items:flex-start;gap:8px}}
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Security Headers -->
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  
+  <!-- Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' https://accounts.google.com https://apis.google.com https://cdn.jsdelivr.net;
+    connect-src 'self' https://www.googleapis.com https://accounts.google.com;
+    img-src 'self' data:;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    frame-ancestors 'none';
+    base-uri 'self';
+  ">
+  
+  <!-- SEO Meta Tags -->
+  <title>DecisionLog – Record, Review, and Improve Your Decisions</title>
+  <meta name="description" content="DecisionLog is a private, Google Drive–based tool that helps you capture major decisions, record your reasoning, review outcomes over time, and improve your judgment through structured feedback. Your data stays entirely with you.">
+  <meta name="keywords" content="decision log, decision journal, decision making app, personal analytics, judgement improvement, reasoning tracker, cognitive bias, review decisions, structured thinking, private decision tracking">
+  <meta name="author" content="DecisionLog">
+  <meta name="theme-color" content="#0f172a">
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://yourdomain.com/">
+  
+  <!-- Robots -->
+  <meta name="robots" content="index, follow">
+  
+  <!-- Open Graph (Facebook/LinkedIn) -->
+  <meta property="og:title" content="DecisionLog – A Better Way to Learn from Your Decisions">
+  <meta property="og:description" content="Capture important decisions, document your reasoning, review them over time, and see how your judgment evolves. 100% private — data stored only in your Google Drive.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://yourdomain.com/">
+  <meta property="og:image" content="https://yourdomain.com/assets/og-image.png">
+  
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="DecisionLog – Improve Your Judgment, One Decision at a Time">
+  <meta name="twitter:description" content="Record your decisions, document reasoning, review outcomes, and understand how your judgment changes. Private, secure, Google Drive–backed.">
+  <meta name="twitter:image" content="https://yourdomain.com/assets/og-image.png">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div>
-        <h1>Decision Log</h1>
-        <div class="meta">Log major decisions; optional ratings; store in your Google Drive.</div>
-      </div>
-      <div class="controls" id="auth-controls">
-        <!-- Google Sign-in button will be inserted here by JS -->
-        <div id="g_id_onload" style="display:none"></div>
-        <div id="signin-button"></div>
-        <div id="user-info" style="display:none"></div>
+  <!-- Skip Link for Accessibility -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  
+  <!-- Toast Container for Notifications -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+  
+  <!-- Home View -->
+  <div id="home-view" class="home-view">
+    <header class="home-header">
+      <div class="container">
+        <div class="logo-section">
+          <img src="/assets/favicon.svg" alt="DecisionLog logo" class="logo-img" width="48" height="48">
+          <div class="logo-text">
+            <h1 class="app-title">DecisionLog</h1>
+            <p class="app-tagline">Decisions remembered. Judgment improved.</p>
+          </div>
+        </div>
+        <nav class="header-nav" aria-label="Main navigation">
+          <button id="sign-in-btn" class="btn btn-primary">
+            Sign in with Google
+          </button>
+          <button class="btn btn-secondary" data-action="show-about" aria-label="About DecisionLog">
+            About
+          </button>
+        </nav>
       </div>
     </header>
 
-    <main style="margin-top:16px;display:grid;grid-template-columns:1fr 360px;gap:12px">
-      <section class="card" aria-labelledby="form-heading">
-        <h2 id="form-heading" style="font-size:1rem;margin:0 0 8px 0">Add / Edit Decision</h2>
-        <form id="decision-form" aria-describedby="form-desc">
-          <div>
-            <label for="title">Title</label>
-            <input id="title" name="title" type="text" required aria-required="true" />
+    <main id="main-content" class="home-main">
+      <section class="hero-section">
+        <div class="container">
+          <h2 class="hero-title">Why DecisionLog Exists</h2>
+          <p class="hero-lead">Most important outcomes in life are shaped by a handful of decisions made under uncertainty. Yet we rarely record what we were thinking at the moment we made them.</p>
+          
+          <div class="value-props">
+            <div class="value-prop">
+              <h3>The Problem</h3>
+              <p>As time passes, our memory distorts the past. We forget our original reasoning, fit new narratives to old outcomes, and judge decisions by how things turned out—not by the quality of thinking behind them. This blindness prevents learning.</p>
+            </div>
+            
+            <div class="value-prop">
+              <h3>The Solution</h3>
+              <p>DecisionLog provides a private, structured way to capture decisions as they happen, review them over time, and see patterns in your judgment. It's a mirror for your thinking—one that stays honest when memory doesn't.</p>
+            </div>
           </div>
-          <div>
-            <label for="date">Date</label>
-            <input id="date" name="date" type="date" />
-          </div>
-          <div>
-            <label for="amount">Amount (optional)</label>
-            <input id="amount" name="amount" type="number" min="0" step="0.01" aria-label="Decision amount" />
-          </div>
-          <div>
-            <label for="tags">Tags (comma-separated)</label>
-            <input id="tags" name="tags" type="text" placeholder="career, investment" />
-          </div>
-
-          <div class="full">
-            <label for="reason">Reasoning / Notes</label>
-            <textarea id="reason" name="reason"></textarea>
-          </div>
-
-          <div>
-            <label for="rating">Optional rating (1-10)</label>
-            <input id="rating" name="rating" type="number" min="1" max="10" />
-            <div class="meta">Leave blank if you don't want to rate now.</div>
-          </div>
-
-          <div>
-            <label for="horizon">Time horizon</label>
-            <select id="horizon" name="horizon">
-              <option value="short">Short (days-weeks)</option>
-              <option value="medium" selected>Medium (months)</option>
-              <option value="long">Long (years)</option>
-            </select>
-          </div>
-
-          <div class="full actions" style="margin-top:8px">
-            <button type="submit" id="save-btn">Save Decision</button>
-            <button type="button" class="ghost" id="clear-btn">Clear</button>
-            <button type="button" class="ghost" id="export-btn">Export JSON</button>
-            <div style="margin-left:auto" class="meta">File: <span id="drive-filename">DecisionLogApp_data.json</span></div>
-          </div>
-        </form>
+        </div>
       </section>
 
-      <aside class="card" aria-labelledby="list-heading">
-        <h2 id="list-heading" style="font-size:1rem;margin:0 0 8px 0">Decisions & Reviews</h2>
-        <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center">
-          <button id="new-review" class="ghost">New annual review</button>
-          <button id="refresh" class="ghost">Refresh from Drive</button>
+      <section class="features-section">
+        <div class="container">
+          <h2 class="section-title">How It Works</h2>
+          
+          <div class="features-grid">
+            <article class="feature-card">
+              <div class="feature-icon" aria-hidden="true">📝</div>
+              <h3>Capture Decisions</h3>
+              <p>Record your reasoning, expectations, alternatives considered, concerns, and emotional factors—before hindsight colors everything.</p>
+            </article>
+            
+            <article class="feature-card">
+              <div class="feature-icon" aria-hidden="true">⭐</div>
+              <h3>Assign Importance</h3>
+              <p>Not every decision deserves the same attention. Mark the high-impact ones that actually matter with a 0-5 star rating.</p>
+            </article>
+            
+            <article class="feature-card">
+              <div class="feature-icon" aria-hidden="true">🔄</div>
+              <h3>Review Over Time</h3>
+              <p>As outcomes unfold, evaluate decisions across three dimensions: how well things turned out, how accurate your thesis was, and how much luck played a role.</p>
+            </article>
+            
+            <article class="feature-card">
+              <div class="feature-icon" aria-hidden="true">📊</div>
+              <h3>See Patterns</h3>
+              <p>Over months or years, reviews reveal where your thinking is consistently strong, where it's biased, and where blind spots repeat.</p>
+            </article>
+            
+            <article class="feature-card">
+              <div class="feature-icon" aria-hidden="true">🎯</div>
+              <h3>Build Self-Awareness</h3>
+              <p>Understand not only what decisions worked, but why—and how your perception changes over time.</p>
+            </article>
+            
+            <article class="feature-card">
+              <div class="feature-icon" aria-hidden="true">🔒</div>
+              <h3>Your Data Stays Yours</h3>
+              <p>Everything is stored solely in your personal Google Drive. No server storage, no tracking, no analytics.</p>
+            </article>
+          </div>
         </div>
-        <div id="list-area" style="max-height:420px;overflow:auto">
-          <ul id="decision-list" class="list" aria-live="polite"></ul>
+      </section>
+
+      <section class="privacy-section">
+        <div class="container">
+          <h2 class="section-title">Privacy & Security</h2>
+          <div class="privacy-grid">
+            <div class="privacy-item">
+              <h3>🔐 No Server Storage</h3>
+              <p>All your decisions and reviews live only in your Google Drive. We never see or store your data.</p>
+            </div>
+            <div class="privacy-item">
+              <h3>🍪 No Cookies</h3>
+              <p>Authentication tokens are kept in memory only. No tracking cookies, no third-party scripts.</p>
+            </div>
+            <div class="privacy-item">
+              <h3>👁️ No Tracking</h3>
+              <p>No analytics, no behavioral logging, no data collection of any kind.</p>
+            </div>
+            <div class="privacy-item">
+              <h3>🎛️ Your Control</h3>
+              <p>Export, import, or delete your data anytime. It's your file in your Drive.</p>
+            </div>
+          </div>
         </div>
-        <hr style="opacity:0.06;margin:12px 0" />
-        <div>
-          <h3 style="margin:0 0 8px 0">Ratings over time</h3>
-          <canvas id="rating-chart" width="340" height="200" aria-label="Chart of ratings over time"></canvas>
+      </section>
+
+      <section class="cta-section">
+        <div class="container">
+          <h2>Ready to improve your judgment?</h2>
+          <p>Start tracking your decisions today. Sign in with Google to get started.</p>
+          <button id="sign-in-btn-cta" class="btn btn-primary btn-lg">
+            Sign in with Google
+          </button>
+          <p class="cta-note">Free to use. Your data stays in your Google Drive.</p>
         </div>
-      </aside>
+      </section>
     </main>
 
-    <footer style="margin-top:12px;color:var(--muted);font-size:0.85rem">
-      <div>Accessible, static, stores data in your Drive. No server required.</div>
+    <footer class="home-footer">
+      <div class="container">
+        <div class="footer-content">
+          <p>&copy; 2025 DecisionLog. Open source project.</p>
+          <nav class="footer-nav" aria-label="Footer navigation">
+            <a href="/privacy.html">Privacy Policy</a>
+            <a href="/terms.html">Terms of Service</a>
+            <a href="https://github.com/yourusername/decisionlog" target="_blank" rel="noopener noreferrer">GitHub</a>
+          </nav>
+        </div>
+      </div>
     </footer>
   </div>
 
-<script>
-/* -------- CONFIG: Insert your client ID and API key here ----------
-   You must create an OAuth Client ID and enable Drive API in Google Cloud Console.
-   - client_id: OAuth 2.0 Client ID (Web application)
-   - apiKey: API Key for calling Google APIs (optional for some flows but used here)
-   For GitHub Pages, add https://your-username.github.io as authorized origin.
-*/
-const CONFIG = {
-  client_id: 'REPLACE_WITH_YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com',
-  apiKey: 'REPLACE_WITH_YOUR_API_KEY',
-  DISC_FILENAME: 'DecisionLogApp_data.json',
-  DRIVE_SCOPE: 'https://www.googleapis.com/auth/drive.file'
-};
+  <!-- App View (Hidden by Default) -->
+  <div id="app-view" class="app-view hidden">
+    <header class="app-header">
+      <div class="header-left">
+        <img src="/assets/favicon.svg" alt="DecisionLog" class="header-logo" width="32" height="32">
+        <h1 class="header-title">DecisionLog</h1>
+        <span class="header-filename" id="current-filename">No file open</span>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-secondary btn-sm" id="open-file-btn" aria-label="Open another file">
+          Open File
+        </button>
+        <button class="btn btn-secondary btn-sm" id="close-file-btn" aria-label="Close current file">
+          Close File
+        </button>
+        <button class="btn btn-secondary btn-sm" id="export-btn" aria-label="Export to JSON">
+          Export
+        </button>
+        <button class="btn btn-secondary btn-sm" id="import-btn" aria-label="Import from JSON">
+          Import
+        </button>
+        <button class="btn btn-secondary btn-sm" data-action="show-about" aria-label="About">
+          About
+        </button>
+        <button class="btn btn-secondary btn-sm" id="sign-out-btn" aria-label="Sign out">
+          Sign Out
+        </button>
+      </div>
+    </header>
 
-// App state
-let g_accessToken = null;
-let g_user = null;
-let g_data = { decisions: [] };
-let g_fileId = null; // Drive file id where the JSON is stored
-let ratingChart = null;
+    <div class="app-main">
+      <aside class="app-sidebar" role="complementary" aria-label="Decisions list and filters">
+        <div class="sidebar-header">
+          <h2 class="sidebar-title">Decisions</h2>
+          <button class="btn btn-primary btn-sm" id="add-decision-btn" aria-label="Add new decision">
+            + Add Decision
+          </button>
+        </div>
 
-// Util: generate UUID
-function uuidv4(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);});}
+        <div class="sidebar-filters">
+          <div class="search-box">
+            <label for="search-input" class="sr-only">Search decisions</label>
+            <input 
+              type="search" 
+              id="search-input" 
+              class="search-input" 
+              placeholder="Search decisions..."
+              aria-label="Search decisions by title, description, or tags"
+            />
+          </div>
+          
+          <!-- Additional filters could be added here -->
+        </div>
 
-// ---------- Google Sign-in & Drive init ----------
-function initializeGSI(){
-  // render Google Sign-in button
-  window.google.accounts.id.initialize({
-    client_id: CONFIG.client_id,
-    callback: handleCredentialResponse,
-    ux_mode: 'popup'
-  });
-  const btn = document.createElement('div');
-  btn.id = 'gsi-btn';
-  // Accessible label for the div that will host the button
-  btn.setAttribute('role','button');
-  btn.setAttribute('tabindex','0');
-  window.google.accounts.id.renderButton(btn, { theme: 'outline', size: 'large', width: 220 });
-  document.getElementById('signin-button').appendChild(btn);
-}
+        <div id="decision-list" class="decision-list" role="region" aria-label="List of decisions">
+          <!-- Decisions will be rendered here by ui.js -->
+        </div>
+      </aside>
 
-async function handleCredentialResponse(response){
-  // response.credential is a JWT - we will exchange for OAuth token using gapi.auth
-  // Simpler path: use OAuth client popup using google.accounts.oauth2
-  // Request access token for Drive
-  try{
-    const tokenResp = await window.google.accounts.oauth2.initTokenClient({
-      client_id: CONFIG.client_id,
-      scope: CONFIG.DRIVE_SCOPE,
-      callback: async (tok) => {
-        if(tok && tok.access_token){
-          g_accessToken = tok.access_token;
-          await initGapiClient();
-          await fetchUserInfo();
-          await loadFromDrive();
-        }
-      }
-    });
-    tokenResp.requestAccessToken();
-  }catch(e){console.error('credential error',e);}
-}
+      <main class="app-content" role="main">
+        <div id="decision-detail" class="decision-detail">
+          <!-- Decision detail will be rendered here by ui.js -->
+          <div class="empty-state" role="status">
+            <p>Select a decision to view details, or add a new decision to get started.</p>
+          </div>
+        </div>
+      </main>
+    </div>
 
-function signOut(){
-  g_accessToken = null; g_user=null; g_fileId=null; g_data={decisions:[]};
-  document.getElementById('user-info').style.display='none';
-  document.getElementById('signin-button').style.display='block';
-  document.getElementById('decision-list').innerHTML='';
-  updateChart();
-}
+    <div class="app-footer">
+      <div class="footer-controls">
+        <label class="toggle-label">
+          <input type="checkbox" id="high-contrast-toggle" aria-label="Toggle high contrast mode">
+          <span>High Contrast</span>
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="keyboard-shortcuts-toggle" aria-label="Enable keyboard shortcuts" checked>
+          <span>Keyboard Shortcuts</span>
+        </label>
+      </div>
+    </div>
+  </div>
 
-function initGapiClient(){
-  return new Promise((resolve, reject)=>{
-    gapi.load('client', async () => {
-      try{
-        await gapi.client.init({ apiKey: CONFIG.apiKey, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
-        // set token for subsequent calls
-        gapi.client.setToken({access_token: g_accessToken});
-        resolve();
-      }catch(err){reject(err);}    
-    });
-  });
-}
-
-async function fetchUserInfo(){
-  // Minimal user info via token introspection not provided in this simple flow.
-  // Show a simple sign-out control
-  document.getElementById('signin-button').style.display='none';
-  const ui = document.getElementById('user-info');
-  ui.style.display='block';
-  ui.innerHTML = `<span class='meta'>Signed in</span> <button id='signout'>Sign out</button>`;
-  document.getElementById('signout').addEventListener('click', signOut);
-}
-
-// ---------- Drive helpers: find file, create/update, download ---------
-async function findFileId(){
-  const q = `name='${CONFIG.DISC_FILENAME.replace("'","\\'")}' and mimeType='application/json' and trashed=false`;
-  const res = await gapi.client.drive.files.list({q, fields:'files(id,name,modifiedTime)'});
-  if(res.result.files && res.result.files.length>0) return res.result.files[0].id;
-  return null;
-}
-
-async function loadFromDrive(){
-  try{
-    g_fileId = await findFileId();
-    if(!g_fileId){
-      // No file yet — initialize empty file in Drive
-      g_data = { decisions: [] };
-      await saveToDrive();
-      renderList(); updateChart();
-      return;
-    }
-    const resp = await gapi.client.drive.files.get({fileId: g_fileId, alt:'media'});
-    const text = (typeof resp.body === 'string') ? resp.body : JSON.stringify(resp.body);
-    try{ g_data = JSON.parse(text); }catch(e){ console.error('parse error', e); g_data={decisions:[]}; }
-    renderList(); updateChart();
-  }catch(e){console.error('load error',e);}
-}
-
-async function saveToDrive(){
-  try{
-    const metadata = { name: CONFIG.DISC_FILENAME, mimeType: 'application/json' };
-    const content = JSON.stringify(g_data, null, 2);
-    let boundary = '-------314159265358979323846';
-    let delimiter = "\r\n--" + boundary + "\r\n";
-    let close_delim = "\r\n--" + boundary + "--";
-
-    let multipartRequestBody =
-      delimiter +
-      'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-      JSON.stringify(metadata) +
-      delimiter +
-      'Content-Type: application/json\r\n\r\n' +
-      content +
-      close_delim;
-
-    if(g_fileId){
-      // update
-      const resp = await gapi.client.request({
-        path: `/upload/drive/v3/files/${g_fileId}`,
-        method: 'PATCH',
-        params: {uploadType: 'multipart'},
-        headers: {'Content-Type': 'multipart/related; boundary="' + boundary + '"'},
-        body: multipartRequestBody
-      });
-      return resp;
-    }else{
-      // create
-      const resp = await gapi.client.request({
-        path: '/upload/drive/v3/files',
-        method: 'POST',
-        params: {uploadType: 'multipart'},
-        headers: {'Content-Type': 'multipart/related; boundary="' + boundary + '"'},
-        body: multipartRequestBody
-      });
-      g_fileId = resp.result.id;
-      return resp;
-    }
-  }catch(e){console.error('save error',e);throw e;}
-}
-
-// ---------- App UI and data logic ----------
-function renderList(){
-  const ul = document.getElementById('decision-list'); ul.innerHTML='';
-  if(!g_data.decisions || g_data.decisions.length===0){ ul.innerHTML = '<li class="meta">No decisions yet.</li>'; return; }
-  // sort by date desc
-  const arr = [...g_data.decisions].sort((a,b)=> (b.date||'') .localeCompare(a.date||''));
-  arr.forEach(item => {
-    const li = document.createElement('li'); li.className='item';
-    const left = document.createElement('div'); left.style.flex='1';
-    const t = document.createElement('div'); t.style.fontWeight='600'; t.textContent = item.title || '(no title)';
-    const meta = document.createElement('div'); meta.className='meta';
-    const d = item.date ? new Date(item.date).toLocaleDateString() : '—';
-    meta.textContent = `${d} • ${item.amount ? ('₹' + item.amount) : ''} ${item.tags? ' • ' + item.tags.join(', '):''}`;
-    const note = document.createElement('div'); note.style.marginTop='6px'; note.textContent = item.reason ? item.reason.substring(0,240) : '';
-    left.appendChild(t); left.appendChild(meta); left.appendChild(note);
-    const right = document.createElement('div'); right.style.marginLeft='12px'; right.style.textAlign='right';
-    if(item.rating){ const r = document.createElement('div'); r.textContent = 'Rating: ' + item.rating; r.className='meta'; right.appendChild(r); }
-    const btnView = document.createElement('button'); btnView.className='ghost'; btnView.textContent='View'; btnView.addEventListener('click', ()=>loadIntoForm(item.id));
-    const btnDelete = document.createElement('button'); btnDelete.className='ghost'; btnDelete.textContent='Delete'; btnDelete.addEventListener('click', ()=>{ if(confirm('Delete this decision?')){ deleteDecision(item.id); } });
-    right.appendChild(btnView); right.appendChild(btnDelete);
-    li.appendChild(left); li.appendChild(right);
-    ul.appendChild(li);
-  });
-}
-
-function loadIntoForm(id){
-  const item = g_data.decisions.find(d=>d.id===id); if(!item) return;
-  document.getElementById('title').value = item.title||'';
-  document.getElementById('date').value = item.date||'';
-  document.getElementById('amount').value = item.amount||'';
-  document.getElementById('tags').value = item.tags ? item.tags.join(', ') : '';
-  document.getElementById('reason').value = item.reason||'';
-  document.getElementById('rating').value = item.rating||'';
-  document.getElementById('horizon').value = item.horizon||'medium';
-  // store editing id on form
-  document.getElementById('decision-form').dataset.editId = id;
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-function clearForm(){
-  document.getElementById('decision-form').reset();
-  delete document.getElementById('decision-form').dataset.editId;
-}
-
-function upsertDecisionFromForm(e){
-  e && e.preventDefault();
-  const f = document.getElementById('decision-form');
-  const id = f.dataset.editId || uuidv4();
-  const item = {
-    id,
-    title: document.getElementById('title').value.trim(),
-    date: document.getElementById('date').value || null,
-    amount: document.getElementById('amount').value || null,
-    tags: document.getElementById('tags').value ? document.getElementById('tags').value.split(',').map(t=>t.trim()).filter(Boolean) : [],
-    reason: document.getElementById('reason').value.trim(),
-    rating: (document.getElementById('rating').value) ? Number(document.getElementById('rating').value) : null,
-    horizon: document.getElementById('horizon').value || 'medium',
-    createdAt: new Date().toISOString()
-  };
-  // replace or add
-  const idx = g_data.decisions.findIndex(d=>d.id===id);
-  if(idx>=0) g_data.decisions[idx] = item; else g_data.decisions.push(item);
-  saveToDrive().then(()=>{
-    renderList(); updateChart(); clearForm(); alert('Saved to your Google Drive.');
-  }).catch(err=>{alert('Save failed. Check console for details.'); console.error(err)});
-}
-
-function deleteDecision(id){
-  g_data.decisions = g_data.decisions.filter(d=>d.id!==id);
-  saveToDrive().then(()=>{ renderList(); updateChart(); }).catch(err=>console.error(err));
-}
-
-function exportJSON(){
-  const blob = new Blob([JSON.stringify(g_data,null,2)],{type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download = CONFIG.DISC_FILENAME; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-}
-
-// Chart
-function updateChart(){
-  const canvas = document.getElementById('rating-chart');
-  const ratings = g_data.decisions.filter(d=>d.rating).sort((a,b)=> new Date(a.date||a.createdAt) - new Date(b.date||b.createdAt));
-  const labels = ratings.map(r=> r.date ? new Date(r.date).toLocaleDateString() : new Date(r.createdAt).toLocaleDateString());
-  const data = ratings.map(r=> r.rating);
-  if(ratingChart) { ratingChart.data.labels = labels; ratingChart.data.datasets[0].data = data; ratingChart.update(); return; }
-  ratingChart = new Chart(canvas.getContext('2d'),{
-    type:'line',
-    data:{ labels, datasets:[{ label:'Perceived rating', data, tension:0.3, fill:false, pointRadius:6 }] },
-    options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ min:0, max:10 } } }
-  });
-}
-
-// Annual review skeleton (creates a review note)
-function newReview(){
-  const now = new Date();
-  const year = now.getFullYear();
-  const review = { id: uuidv4(), title: `Annual review ${year}`, date: now.toISOString().slice(0,10), amount:null, tags:['review'], reason:'Annual review', rating:null, horizon:'long', createdAt: now.toISOString() };
-  g_data.decisions.push(review);
-  saveToDrive().then(()=>{ renderList(); updateChart(); alert('Annual review created.'); }).catch(e=>console.error(e));
-}
-
-// ---------- Init and event wiring ----------
-document.addEventListener('DOMContentLoaded', ()=>{
-  // wire form
-  document.getElementById('decision-form').addEventListener('submit', upsertDecisionFromForm);
-  document.getElementById('clear-btn').addEventListener('click', clearForm);
-  document.getElementById('export-btn').addEventListener('click', exportJSON);
-  document.getElementById('refresh').addEventListener('click', ()=>{ if(!g_accessToken) return alert('Sign in first'); loadFromDrive(); });
-  document.getElementById('new-review').addEventListener('click', newReview);
-
-  // Prepare Google sign-in UI
-  initializeGSI();
-
-  // Initialize empty chart to start
-  updateChart();
-});
-
-</script>
-
+  <!-- External Dependencies -->
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  
+  <!-- Google API Client -->
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+  
+  <!-- Chart.js for visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-11Bn6TJS7WPrSaLf1BjkQ3KT9/5d4PqKmL7FQ/VUa6/1FfLvb+g9f4eVJqBX6v8S" crossorigin="anonymous"></script>
+  
+  <!-- DOMPurify for sanitization (optional but recommended) -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js" integrity="sha384-FAPh3W6+7LrLqfJfELPiqXvvqPt9Xp5IqZK+WmxrNs9aGKVwDQlT8p3MKGaLNPjQ" crossorigin="anonymous"></script>
+  
+  <!-- Application Scripts (in order of dependency) -->
+  <script src="/js/utils.js" defer></script>
+  <script src="/js/accessibility.js" defer></script>
+  <script src="/js/auth.js" defer></script>
+  <script src="/js/storage.js" defer></script>
+  <script src="/js/charts.js" defer></script>
+  <script src="/js/forms.js" defer></script>
+  <script src="/js/ui.js" defer></script>
+  <script src="/script.js" defer></script>
 </body>
 </html>
