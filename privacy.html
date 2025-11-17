@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Security Headers -->
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  
+  <title>Privacy Policy | DecisionLog</title>
+  <meta name="description" content="DecisionLog Privacy Policy - Learn how we protect your data and privacy.">
+  <meta name="robots" content="index, follow">
+  
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="canonical" href="https://yourdomain.com/privacy.html">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  
+  <header class="page-header">
+    <div class="container">
+      <div class="header-content">
+        <a href="/" class="logo-link">
+          <img src="/assets/favicon.svg" alt="DecisionLog" class="logo-img" width="32" height="32">
+          <span class="logo-text">DecisionLog</span>
+        </a>
+        <nav aria-label="Main navigation">
+          <a href="/" class="nav-link">Home</a>
+          <a href="/terms.html" class="nav-link">Terms</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" class="page-main">
+    <article class="container policy-content">
+      <h1>Privacy Policy</h1>
+      <p class="policy-updated">Last Updated: November 17, 2025</p>
+
+      <section class="policy-section">
+        <h2>Our Commitment to Privacy</h2>
+        <p>DecisionLog is built on a foundation of privacy and data ownership. We believe your decision data is deeply personal and should belong only to you. This privacy policy explains how DecisionLog works and what happens to your data.</p>
+        
+        <p><strong>Core Principle:</strong> We don't collect, store, or have access to your decision data. Period.</p>
+      </section>
+
+      <section class="policy-section">
+        <h2>How DecisionLog Works</h2>
+        <p>DecisionLog is a fully client-side web application. This means:</p>
+        <ul>
+          <li>All processing happens in your web browser</li>
+          <li>There is no server backend that stores your data</li>
+          <li>Your decisions are saved directly to your Google Drive account</li>
+          <li>We never see, access, or store your decision data on our servers</li>
+        </ul>
+      </section>
+
+      <section class="policy-section">
+        <h2>Data Storage</h2>
+        <h3>Your Google Drive</h3>
+        <p>When you use DecisionLog:</p>
+        <ul>
+          <li>You authenticate with Google using OAuth 2.0</li>
+          <li>DecisionLog requests permission to create and access only the files it creates in your Google Drive</li>
+          <li>All your decisions, reviews, and notes are stored in JSON files in your Drive</li>
+          <li>You maintain full control and ownership of these files</li>
+          <li>You can view, download, modify, or delete these files at any time through Google Drive</li>
+        </ul>
+
+        <h3>Local Browser Storage</h3>
+        <p>DecisionLog uses your browser's localStorage only for non-sensitive UI preferences:</p>
+        <ul>
+          <li>Theme preference (light/dark mode)</li>
+          <li>High contrast mode setting</li>
+          <li>Keyboard shortcuts enabled/disabled</li>
+          <li>Font size preference</li>
+        </ul>
+        <p>These preferences never leave your device and contain no personal data. You can clear them at any time through your browser settings.</p>
+      </section>
+
+      <section class="policy-section">
+        <h2>What We Don't Collect</h2>
+        <p>DecisionLog does NOT collect, store, or transmit:</p>
+        <ul>
+          <li>Your decision content or reviews</li>
+          <li>Your personal information (name, email, etc.) - we only use it for Google authentication</li>
+          <li>Usage analytics or behavioral data</li>
+          <li>Cookies for tracking purposes</li>
+          <li>IP addresses or device information</li>
+          <li>Any data to third-party services or advertisers</li>
+        </ul>
+      </section>
+
+      <section class="policy-section">
+        <h2>Authentication</h2>
+        <p>DecisionLog uses Google Identity Services for authentication:</p>
+        <ul>
+          <li>We request only the minimum necessary permission: <code>https://www.googleapis.com/auth/drive.file</code></li>
+          <li>This scope allows DecisionLog to access only files it creates, not your entire Drive</li>
+          <li>Authentication tokens are stored in memory only and are never saved to disk or cookies</li>
+          <li>When you sign out or close your browser, all tokens are discarded</li>
+          <li>You can revoke DecisionLog's access at any time through your Google Account settings</li>
+        </ul>
+      </section>
+
+      <section class="policy-section">
+        <h2>Third-Party Services</h2>
+        <p>DecisionLog uses the following third-party services:</p>
+        
+        <h3>Google Services</h3>
+        <ul>
+          <li><strong>Google Identity Services</strong> - For user authentication</li>
+          <li><strong>Google Drive API</strong> - For storing your decision files</li>
+        </ul>
+        <p>Google's use of your data is governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's Privacy Policy</a>.</p>
+
+        <h3>Content Delivery Networks (CDNs)</h3>
+        <p>We load the following libraries from CDNs for functionality:</p>
+        <ul>
+          <li><strong>Chart.js</strong> (jsDelivr) - For creating charts and visualizations</li>
+          <li><strong>DOMPurify</strong> (jsDelivr) - For sanitizing user input</li>
+          <li><strong>Google Fonts</strong> - For typography</li>
+        </ul>
+        <p>These CDNs may log requests for their own operational purposes, but they do not have access to your decision data.</p>
+      </section>
+
+      <section class="policy-section">
+        <h2>Security</h2>
+        <p>We take security seriously and implement multiple measures to protect your data:</p>
+        <ul>
+          <li><strong>Client-side processing</strong> - All data handling occurs in your browser</li>
+          <li><strong>Input sanitization</strong> - All user input is sanitized to prevent XSS attacks</li>
+          <li><strong>Content Security Policy</strong> - Strict CSP headers prevent unauthorized script execution</li>
+          <li><strong>HTTPS only</strong> - All communication with Google APIs is encrypted via HTTPS</li>
+          <li><strong>No server storage</strong> - Since we don't have servers storing your data, there's no centralized target for data breaches</li>
+          <li><strong>Minimal permissions</strong> - We request only the minimum Google Drive permissions needed</li>
+        </ul>
+      </section>
+
+      <section class="policy-section">
+        <h2>Data Retention and Deletion</h2>
+        <p>Since your data lives only in your Google Drive:</p>
+        <ul>
+          <li>You control how long your data is retained</li>
+          <li>You can delete any decision file at any time through Google Drive</li>
+          <li>You can revoke DecisionLog's access to your Drive at any time</li>
+          <li>Deleting files from your Drive permanently removes them (subject to Google Drive's trash/recovery policies)</li>
+        </ul>
+      </section>
+
+      <section class="policy-section">
+        <h2>Children's Privacy</h2>
+        <p>DecisionLog is not intended for use by children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe a child under 13 has used DecisionLog, please contact us immediately.</p>
+      </section>
+
+      <section class="policy-section">
+        <h2>International Users</h2>
+        <p>DecisionLog is a client-side application that can be used from anywhere. Your data remains in your Google Drive account, which is subject to Google's data storage policies based on your account location.</p>
+      </section>
+
+      <section class="policy-section">
+        <h2>Changes to This Privacy Policy</h2>
+        <p>We may update this privacy policy from time to time. Changes will be posted on this page with an updated "Last Updated" date. We encourage you to review this policy periodically.</p>
+        <p>Since DecisionLog doesn't collect contact information, we cannot notify you directly of changes. Significant changes will be announced on the home page.</p>
+      </section>
+
+      <section class="policy-section">
+        <h2>Open Source</h2>
+        <p>DecisionLog is an open-source project. You can:</p>
+        <ul>
+          <li>Review the complete source code on GitHub</li>
+          <li>Verify that we're not collecting data</li>
+          <li>Self-host the application if you prefer</li>
+          <li>Contribute improvements to the project</li>
+        </ul>
+      </section>
+
+      <section class="policy-section">
+        <h2>Your Rights</h2>
+        <p>You have complete control over your data:</p>
+        <ul>
+          <li><strong>Access</strong> - Access your data anytime through your Google Drive</li>
+          <li><strong>Export</strong> - Export your decisions as JSON files</li>
+          <li><strong>Modify</strong> - Edit or update your decisions at any time</li>
+          <li><strong>Delete</strong> - Delete any or all of your decision files</li>
+          <li><strong>Portability</strong> - Export and import your data in standard JSON format</li>
+          <li><strong>Revoke Access</strong> - Revoke DecisionLog's access through Google Account settings</li>
+        </ul>
+      </section>
+
+      <section class="policy-section">
+        <h2>Questions or Concerns</h2>
+        <p>If you have questions about this privacy policy or how DecisionLog handles data, please:</p>
+        <ul>
+          <li>Open an issue on our GitHub repository</li>
+          <li>Review the source code to verify our privacy practices</li>
+          <li>Contact us through the channels listed on our GitHub page</li>
+        </ul>
+      </section>
+
+      <section class="policy-section">
+        <h2>Summary</h2>
+        <p class="summary-text">
+          <strong>DecisionLog is designed for maximum privacy:</strong> Your decisions live only in your Google Drive. We don't have servers storing your data. We don't track you. We don't use cookies. We don't collect analytics. Your data is yours, and it stays yours.
+        </p>
+      </section>
+    </article>
+  </main>
+
+  <footer class="page-footer">
+    <div class="container">
+      <div class="footer-content">
+        <p>&copy; 2025 DecisionLog. Open source project.</p>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <a href="/">Home</a>
+          <a href="/privacy.html">Privacy Policy</a>
+          <a href="/terms.html">Terms of Service</a>
+          <a href="https://github.com/yourusername/decisionlog" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
