@@ -1,0 +1,16 @@
+# robots.txt for DecisionLog
+
+User-agent: *
+Allow: /
+
+# Allow indexing of main pages
+Allow: /index.html
+Allow: /privacy.html
+Allow: /terms.html
+
+# Disallow indexing of assets and scripts
+Disallow: /js/
+Disallow: /assets/
+
+# Sitemap (update with your actual domain)
+Sitemap: https://yourdomain.com/sitemap.xml
