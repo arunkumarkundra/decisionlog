@@ -1,0 +1,432 @@
+<!--
+DecisionLogApp - Single-file static HTML app
+Features:
+- Minimal-friction decision logging for high-impact decisions
+- Optional rating, timeline of rating changes
+- Responsive and accessible UI
+- Sign in with Google (OAuth) — client-side only
+- All data stored in user's Google Drive as a single JSON file (no app DB)
+
+IMPORTANT setup notes (read before running):
+1) Create OAuth 2.0 Client ID in Google Cloud Console (type: Web application).
+   - Add your GitHub Pages URL (or http://localhost) to authorized origins.
+   - Copy the Client ID and API key into the <script> config below.
+2) Enable Google Drive API for the project.
+3) Place this single HTML file on GitHub Pages or open locally (if testing locally, use an origin registered in OAuth).
+4) Scopes used: https://www.googleapis.com/auth/drive.file (only gives the app access to files it creates/opened)
+
+Security & privacy:
+- This app stores a single JSON file in the user's Drive named: DecisionLogApp_data.json
+- The app only requests drive.file scope (access to files created or opened by the app), not full drive.
+- If you want stronger privacy, add client-side encryption before upload (I can help add that).
+
+If anything fails due to Google APIs changes, tell me your client ID and I can adjust the code or instructions.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Decision Log · Static</title>
+  <meta name="description" content="Minimal decision-logging app. Stores your decision log file in your Google Drive. Responsive and accessible." />
+
+  <!-- Chart.js for rating graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Google Identity Services (for sign-in) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- Google APIs client (for Drive REST calls) -->
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+
+  <style>
+    :root{--bg:#0f172a;--card:#0b1220;--muted:#94a3b8;--accent:#60a5fa;--success:#10b981}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,'Helvetica Neue',Arial}
+    body{background:linear-gradient(180deg,#071129 0%, #0b1220 100%);color:#e6eef8;line-height:1.4}
+    .container{max-width:980px;margin:28px auto;padding:18px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between}
+    h1{font-size:1.2rem;margin:0}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6);}
+    form{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    label{display:block;font-size:0.85rem;color:var(--muted)}
+    input[type=text], input[type=date], input[type=number], textarea, select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+    textarea{min-height:90px;resize:vertical}
+    .full{grid-column:1/-1}
+    .actions{display:flex;gap:8px;align-items:center}
+    button{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;color:#042035;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    .controls{display:flex;gap:8px;align-items:center}
+    nav{display:flex;gap:6px;align-items:center}
+    ul.list{margin:0;padding:0;list-style:none}
+    li.item{padding:10px;border-radius:8px;margin-bottom:8px;background:rgba(255,255,255,0.01);display:flex;justify-content:space-between;align-items:flex-start}
+    .meta{font-size:0.85rem;color:var(--muted)}
+    @media (max-width:720px){form{grid-template-columns:1fr} .container{padding:12px} header{flex-direction:column;align-items:flex-start;gap:8px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Decision Log</h1>
+        <div class="meta">Log major decisions; optional ratings; store in your Google Drive.</div>
+      </div>
+      <div class="controls" id="auth-controls">
+        <!-- Google Sign-in button will be inserted here by JS -->
+        <div id="g_id_onload" style="display:none"></div>
+        <div id="signin-button"></div>
+        <div id="user-info" style="display:none"></div>
+      </div>
+    </header>
+
+    <main style="margin-top:16px;display:grid;grid-template-columns:1fr 360px;gap:12px">
+      <section class="card" aria-labelledby="form-heading">
+        <h2 id="form-heading" style="font-size:1rem;margin:0 0 8px 0">Add / Edit Decision</h2>
+        <form id="decision-form" aria-describedby="form-desc">
+          <div>
+            <label for="title">Title</label>
+            <input id="title" name="title" type="text" required aria-required="true" />
+          </div>
+          <div>
+            <label for="date">Date</label>
+            <input id="date" name="date" type="date" />
+          </div>
+          <div>
+            <label for="amount">Amount (optional)</label>
+            <input id="amount" name="amount" type="number" min="0" step="0.01" aria-label="Decision amount" />
+          </div>
+          <div>
+            <label for="tags">Tags (comma-separated)</label>
+            <input id="tags" name="tags" type="text" placeholder="career, investment" />
+          </div>
+
+          <div class="full">
+            <label for="reason">Reasoning / Notes</label>
+            <textarea id="reason" name="reason"></textarea>
+          </div>
+
+          <div>
+            <label for="rating">Optional rating (1-10)</label>
+            <input id="rating" name="rating" type="number" min="1" max="10" />
+            <div class="meta">Leave blank if you don't want to rate now.</div>
+          </div>
+
+          <div>
+            <label for="horizon">Time horizon</label>
+            <select id="horizon" name="horizon">
+              <option value="short">Short (days-weeks)</option>
+              <option value="medium" selected>Medium (months)</option>
+              <option value="long">Long (years)</option>
+            </select>
+          </div>
+
+          <div class="full actions" style="margin-top:8px">
+            <button type="submit" id="save-btn">Save Decision</button>
+            <button type="button" class="ghost" id="clear-btn">Clear</button>
+            <button type="button" class="ghost" id="export-btn">Export JSON</button>
+            <div style="margin-left:auto" class="meta">File: <span id="drive-filename">DecisionLogApp_data.json</span></div>
+          </div>
+        </form>
+      </section>
+
+      <aside class="card" aria-labelledby="list-heading">
+        <h2 id="list-heading" style="font-size:1rem;margin:0 0 8px 0">Decisions & Reviews</h2>
+        <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center">
+          <button id="new-review" class="ghost">New annual review</button>
+          <button id="refresh" class="ghost">Refresh from Drive</button>
+        </div>
+        <div id="list-area" style="max-height:420px;overflow:auto">
+          <ul id="decision-list" class="list" aria-live="polite"></ul>
+        </div>
+        <hr style="opacity:0.06;margin:12px 0" />
+        <div>
+          <h3 style="margin:0 0 8px 0">Ratings over time</h3>
+          <canvas id="rating-chart" width="340" height="200" aria-label="Chart of ratings over time"></canvas>
+        </div>
+      </aside>
+    </main>
+
+    <footer style="margin-top:12px;color:var(--muted);font-size:0.85rem">
+      <div>Accessible, static, stores data in your Drive. No server required.</div>
+    </footer>
+  </div>
+
+<script>
+/* -------- CONFIG: Insert your client ID and API key here ----------
+   You must create an OAuth Client ID and enable Drive API in Google Cloud Console.
+   - client_id: OAuth 2.0 Client ID (Web application)
+   - apiKey: API Key for calling Google APIs (optional for some flows but used here)
+   For GitHub Pages, add https://your-username.github.io as authorized origin.
+*/
+const CONFIG = {
+  client_id: 'REPLACE_WITH_YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com',
+  apiKey: 'REPLACE_WITH_YOUR_API_KEY',
+  DISC_FILENAME: 'DecisionLogApp_data.json',
+  DRIVE_SCOPE: 'https://www.googleapis.com/auth/drive.file'
+};
+
+// App state
+let g_accessToken = null;
+let g_user = null;
+let g_data = { decisions: [] };
+let g_fileId = null; // Drive file id where the JSON is stored
+let ratingChart = null;
+
+// Util: generate UUID
+function uuidv4(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);});}
+
+// ---------- Google Sign-in & Drive init ----------
+function initializeGSI(){
+  // render Google Sign-in button
+  window.google.accounts.id.initialize({
+    client_id: CONFIG.client_id,
+    callback: handleCredentialResponse,
+    ux_mode: 'popup'
+  });
+  const btn = document.createElement('div');
+  btn.id = 'gsi-btn';
+  // Accessible label for the div that will host the button
+  btn.setAttribute('role','button');
+  btn.setAttribute('tabindex','0');
+  window.google.accounts.id.renderButton(btn, { theme: 'outline', size: 'large', width: 220 });
+  document.getElementById('signin-button').appendChild(btn);
+}
+
+async function handleCredentialResponse(response){
+  // response.credential is a JWT - we will exchange for OAuth token using gapi.auth
+  // Simpler path: use OAuth client popup using google.accounts.oauth2
+  // Request access token for Drive
+  try{
+    const tokenResp = await window.google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.client_id,
+      scope: CONFIG.DRIVE_SCOPE,
+      callback: async (tok) => {
+        if(tok && tok.access_token){
+          g_accessToken = tok.access_token;
+          await initGapiClient();
+          await fetchUserInfo();
+          await loadFromDrive();
+        }
+      }
+    });
+    tokenResp.requestAccessToken();
+  }catch(e){console.error('credential error',e);}
+}
+
+function signOut(){
+  g_accessToken = null; g_user=null; g_fileId=null; g_data={decisions:[]};
+  document.getElementById('user-info').style.display='none';
+  document.getElementById('signin-button').style.display='block';
+  document.getElementById('decision-list').innerHTML='';
+  updateChart();
+}
+
+function initGapiClient(){
+  return new Promise((resolve, reject)=>{
+    gapi.load('client', async () => {
+      try{
+        await gapi.client.init({ apiKey: CONFIG.apiKey, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
+        // set token for subsequent calls
+        gapi.client.setToken({access_token: g_accessToken});
+        resolve();
+      }catch(err){reject(err);}    
+    });
+  });
+}
+
+async function fetchUserInfo(){
+  // Minimal user info via token introspection not provided in this simple flow.
+  // Show a simple sign-out control
+  document.getElementById('signin-button').style.display='none';
+  const ui = document.getElementById('user-info');
+  ui.style.display='block';
+  ui.innerHTML = `<span class='meta'>Signed in</span> <button id='signout'>Sign out</button>`;
+  document.getElementById('signout').addEventListener('click', signOut);
+}
+
+// ---------- Drive helpers: find file, create/update, download ---------
+async function findFileId(){
+  const q = `name='${CONFIG.DISC_FILENAME.replace("'","\\'")}' and mimeType='application/json' and trashed=false`;
+  const res = await gapi.client.drive.files.list({q, fields:'files(id,name,modifiedTime)'});
+  if(res.result.files && res.result.files.length>0) return res.result.files[0].id;
+  return null;
+}
+
+async function loadFromDrive(){
+  try{
+    g_fileId = await findFileId();
+    if(!g_fileId){
+      // No file yet — initialize empty file in Drive
+      g_data = { decisions: [] };
+      await saveToDrive();
+      renderList(); updateChart();
+      return;
+    }
+    const resp = await gapi.client.drive.files.get({fileId: g_fileId, alt:'media'});
+    const text = (typeof resp.body === 'string') ? resp.body : JSON.stringify(resp.body);
+    try{ g_data = JSON.parse(text); }catch(e){ console.error('parse error', e); g_data={decisions:[]}; }
+    renderList(); updateChart();
+  }catch(e){console.error('load error',e);}
+}
+
+async function saveToDrive(){
+  try{
+    const metadata = { name: CONFIG.DISC_FILENAME, mimeType: 'application/json' };
+    const content = JSON.stringify(g_data, null, 2);
+    let boundary = '-------314159265358979323846';
+    let delimiter = "\r\n--" + boundary + "\r\n";
+    let close_delim = "\r\n--" + boundary + "--";
+
+    let multipartRequestBody =
+      delimiter +
+      'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+      JSON.stringify(metadata) +
+      delimiter +
+      'Content-Type: application/json\r\n\r\n' +
+      content +
+      close_delim;
+
+    if(g_fileId){
+      // update
+      const resp = await gapi.client.request({
+        path: `/upload/drive/v3/files/${g_fileId}`,
+        method: 'PATCH',
+        params: {uploadType: 'multipart'},
+        headers: {'Content-Type': 'multipart/related; boundary="' + boundary + '"'},
+        body: multipartRequestBody
+      });
+      return resp;
+    }else{
+      // create
+      const resp = await gapi.client.request({
+        path: '/upload/drive/v3/files',
+        method: 'POST',
+        params: {uploadType: 'multipart'},
+        headers: {'Content-Type': 'multipart/related; boundary="' + boundary + '"'},
+        body: multipartRequestBody
+      });
+      g_fileId = resp.result.id;
+      return resp;
+    }
+  }catch(e){console.error('save error',e);throw e;}
+}
+
+// ---------- App UI and data logic ----------
+function renderList(){
+  const ul = document.getElementById('decision-list'); ul.innerHTML='';
+  if(!g_data.decisions || g_data.decisions.length===0){ ul.innerHTML = '<li class="meta">No decisions yet.</li>'; return; }
+  // sort by date desc
+  const arr = [...g_data.decisions].sort((a,b)=> (b.date||'') .localeCompare(a.date||''));
+  arr.forEach(item => {
+    const li = document.createElement('li'); li.className='item';
+    const left = document.createElement('div'); left.style.flex='1';
+    const t = document.createElement('div'); t.style.fontWeight='600'; t.textContent = item.title || '(no title)';
+    const meta = document.createElement('div'); meta.className='meta';
+    const d = item.date ? new Date(item.date).toLocaleDateString() : '—';
+    meta.textContent = `${d} • ${item.amount ? ('₹' + item.amount) : ''} ${item.tags? ' • ' + item.tags.join(', '):''}`;
+    const note = document.createElement('div'); note.style.marginTop='6px'; note.textContent = item.reason ? item.reason.substring(0,240) : '';
+    left.appendChild(t); left.appendChild(meta); left.appendChild(note);
+    const right = document.createElement('div'); right.style.marginLeft='12px'; right.style.textAlign='right';
+    if(item.rating){ const r = document.createElement('div'); r.textContent = 'Rating: ' + item.rating; r.className='meta'; right.appendChild(r); }
+    const btnView = document.createElement('button'); btnView.className='ghost'; btnView.textContent='View'; btnView.addEventListener('click', ()=>loadIntoForm(item.id));
+    const btnDelete = document.createElement('button'); btnDelete.className='ghost'; btnDelete.textContent='Delete'; btnDelete.addEventListener('click', ()=>{ if(confirm('Delete this decision?')){ deleteDecision(item.id); } });
+    right.appendChild(btnView); right.appendChild(btnDelete);
+    li.appendChild(left); li.appendChild(right);
+    ul.appendChild(li);
+  });
+}
+
+function loadIntoForm(id){
+  const item = g_data.decisions.find(d=>d.id===id); if(!item) return;
+  document.getElementById('title').value = item.title||'';
+  document.getElementById('date').value = item.date||'';
+  document.getElementById('amount').value = item.amount||'';
+  document.getElementById('tags').value = item.tags ? item.tags.join(', ') : '';
+  document.getElementById('reason').value = item.reason||'';
+  document.getElementById('rating').value = item.rating||'';
+  document.getElementById('horizon').value = item.horizon||'medium';
+  // store editing id on form
+  document.getElementById('decision-form').dataset.editId = id;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function clearForm(){
+  document.getElementById('decision-form').reset();
+  delete document.getElementById('decision-form').dataset.editId;
+}
+
+function upsertDecisionFromForm(e){
+  e && e.preventDefault();
+  const f = document.getElementById('decision-form');
+  const id = f.dataset.editId || uuidv4();
+  const item = {
+    id,
+    title: document.getElementById('title').value.trim(),
+    date: document.getElementById('date').value || null,
+    amount: document.getElementById('amount').value || null,
+    tags: document.getElementById('tags').value ? document.getElementById('tags').value.split(',').map(t=>t.trim()).filter(Boolean) : [],
+    reason: document.getElementById('reason').value.trim(),
+    rating: (document.getElementById('rating').value) ? Number(document.getElementById('rating').value) : null,
+    horizon: document.getElementById('horizon').value || 'medium',
+    createdAt: new Date().toISOString()
+  };
+  // replace or add
+  const idx = g_data.decisions.findIndex(d=>d.id===id);
+  if(idx>=0) g_data.decisions[idx] = item; else g_data.decisions.push(item);
+  saveToDrive().then(()=>{
+    renderList(); updateChart(); clearForm(); alert('Saved to your Google Drive.');
+  }).catch(err=>{alert('Save failed. Check console for details.'); console.error(err)});
+}
+
+function deleteDecision(id){
+  g_data.decisions = g_data.decisions.filter(d=>d.id!==id);
+  saveToDrive().then(()=>{ renderList(); updateChart(); }).catch(err=>console.error(err));
+}
+
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(g_data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download = CONFIG.DISC_FILENAME; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+// Chart
+function updateChart(){
+  const canvas = document.getElementById('rating-chart');
+  const ratings = g_data.decisions.filter(d=>d.rating).sort((a,b)=> new Date(a.date||a.createdAt) - new Date(b.date||b.createdAt));
+  const labels = ratings.map(r=> r.date ? new Date(r.date).toLocaleDateString() : new Date(r.createdAt).toLocaleDateString());
+  const data = ratings.map(r=> r.rating);
+  if(ratingChart) { ratingChart.data.labels = labels; ratingChart.data.datasets[0].data = data; ratingChart.update(); return; }
+  ratingChart = new Chart(canvas.getContext('2d'),{
+    type:'line',
+    data:{ labels, datasets:[{ label:'Perceived rating', data, tension:0.3, fill:false, pointRadius:6 }] },
+    options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ min:0, max:10 } } }
+  });
+}
+
+// Annual review skeleton (creates a review note)
+function newReview(){
+  const now = new Date();
+  const year = now.getFullYear();
+  const review = { id: uuidv4(), title: `Annual review ${year}`, date: now.toISOString().slice(0,10), amount:null, tags:['review'], reason:'Annual review', rating:null, horizon:'long', createdAt: now.toISOString() };
+  g_data.decisions.push(review);
+  saveToDrive().then(()=>{ renderList(); updateChart(); alert('Annual review created.'); }).catch(e=>console.error(e));
+}
+
+// ---------- Init and event wiring ----------
+document.addEventListener('DOMContentLoaded', ()=>{
+  // wire form
+  document.getElementById('decision-form').addEventListener('submit', upsertDecisionFromForm);
+  document.getElementById('clear-btn').addEventListener('click', clearForm);
+  document.getElementById('export-btn').addEventListener('click', exportJSON);
+  document.getElementById('refresh').addEventListener('click', ()=>{ if(!g_accessToken) return alert('Sign in first'); loadFromDrive(); });
+  document.getElementById('new-review').addEventListener('click', newReview);
+
+  // Prepare Google sign-in UI
+  initializeGSI();
+
+  // Initialize empty chart to start
+  updateChart();
+});
+
+</script>
+
+</body>
+</html>
